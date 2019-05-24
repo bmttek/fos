@@ -677,6 +677,7 @@ writeImage()  {
     esac
     local format=$imgLegacy
     [[ -z $format ]] && format=$imgFormat
+	[[ -z $format ]] && format=0
     case $format in
         5|6)
             # ZSTD Compressed image.
@@ -2109,6 +2110,7 @@ restorePartition() {
                         case $win7partcnt in
                             1)
                                 imgpart="$imagePath/sys.img.*"
+								echo "Image Part Case 1 $imgpart"
                                 ;;
                             2)
                                 case $part_number in

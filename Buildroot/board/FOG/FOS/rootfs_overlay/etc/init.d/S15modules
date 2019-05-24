@@ -1,0 +1,25 @@
+#!/bin/bash
+depmod
+hwList=$(lspci -k)
+IFS=$'\n'
+for hwItem in $hwList
+do
+    if [[ $hwItem == *"Kernel modules"* ]];
+    then
+        IFS=$':'
+        for hwItemMod in $hwItem
+        do
+            if [[ $hwItemMod == *"Kernel modules"* ]];
+            then
+                strTemp=""
+            else
+                shopt -s extglob
+                modName="${hwItemMod##*( )}"
+                modName="${modName%%*( )}"
+                echo "Loding module:${modName}"
+                modprobe "${modName}"
+                shopt -u extglob
+            fi
+        done
+    fi
+done

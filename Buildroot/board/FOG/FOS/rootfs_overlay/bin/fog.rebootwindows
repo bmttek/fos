@@ -1,0 +1,47 @@
+#!/bin/bash
+. /usr/share/fog/lib/funcs.sh
+##clearScreen
+output=$(efibootmgr)
+debian=""
+windows=""
+bootorder=""
+IFS=$'\n'
+for item in $output
+do
+	if [[ $item == *"Windows Boot Manager"* ]]; then
+		windows=$(echo $item | awk '{sub(/Windows Boot Manager/,""); print}' | awk '{sub(/* /,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}' | tr -d '[:space:]')
+	fi
+	if [[ $item == *"debian"* ]]; then
+		debian=$(echo $item | awk '{sub(/debian/,""); print}' | awk '{sub(/*/,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}' | tr -d '[:space:]')
+	fi
+done
+for item in $output
+do
+	if [[ $item == *"BootOrder"* ]]; then
+		if [[ ${#debian} -ge 1 ]]; then
+			 bootorder="$debian"
+		fi
+		if [[ ${#bootorder} -ge 1 ]]; then
+			if [[ ! -z "$windows"  ]]; then
+				bootorder="$bootorder,$windows"
+			fi
+		else
+			if [[ ${#windows} -ge 1 ]]; then
+                                bootorder="$windows"
+                        fi
+		fi
+		bootList=$(echo $item | tr ',' '\n')
+		for bootItem in $bootList
+		do
+			bootItem=$(echo $bootItem | awk '{sub(/BootOrder: /,""); print}')
+			if [[ "$bootItem" != "$debian" ]] && [[ "$bootItem" != "$windows" ]]; then
+				bootorder="$bootorder,$bootItem"
+			fi
+		done
+	fi
+done
+echo "Changing boot order"
+changeBoot=$(efibootmgr --bootnext $windows)
+changeBootOrder=$(efibootmgr --bootorder $bootorder)
+efibootmgr
+echo "Rebooting into Windows"

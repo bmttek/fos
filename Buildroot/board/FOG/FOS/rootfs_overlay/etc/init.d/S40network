@@ -15,18 +15,29 @@ echo -e "auto lo\niface lo inet loopback\n\n" > /etc/network/interfaces
 /sbin/ip link set lo up
 
 sleep 10
+iswlan=0
 
 # Generated a sorted list with primary interfaces first
 read p_ifaces <<< $(/sbin/ip -0 addr show | awk 'ORS=NR%2?FS:RS' | awk -F'[: ]+' 'tolower($0) ~ /link[/]?ether/ && tolower($0) ~ /'$mac'/ {print $2}' | tr '\n' ' ')
 read o_ifaces <<< $(/sbin/ip -0 addr show | awk 'ORS=NR%2?FS:RS' | awk -F'[: ]+' 'tolower($0) ~ /link[/]?ether/ && tolower($0) !~ /'$mac'/ {print $2}' | tr '\n' ' ')
 ifaces="$p_ifaces $o_ifaces"
 for iface in $ifaces; do
+    echo "Checking is interface wireless: if it is connect to wireless network"
+    if [[ $iface == w* || $iface == m* ]]
+    then
+        iswlan=1
+        echo -e "allow-hotplug $iface\niface $iface inet dhcp\nwpa-conf /etc/wpa_supplicant.conf\n\n" >> /etc/network/interfaces
+    else
+        echo -e "auto $iface\niface $iface inet dhcp\n\n" >> /etc/network/interfaces
+    fi
     echo "Starting $iface interface and waiting for the link to come up"
-    echo -e "auto $iface\niface $iface inet dhcp\n\n" >> /etc/network/interfaces
     /sbin/ip link set $iface up
-
+    if [[ $iswlan -eq 1  ]]
+    then
+       wpa_supplicant -i$iface -c /etc/wpa_supplicant.conf -B
+    fi
     # Wait till the interface is fully up and ready (spanning tree)
-    timeout=0
+    timeout=10
     linkstate=0
     until [[ $linkstate -eq 1 || $timeout -ge 35 ]]; do
         let timeout+=1

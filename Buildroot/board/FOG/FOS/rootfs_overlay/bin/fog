@@ -80,7 +80,8 @@ else
             ;;
         *)
             [[ -z $type ]] && type="Null"
-            handleError "Fatal Error: Unknown request type :: $type"
+            fog.rebootwindows
+            ###handleError "Fatal Error: Unknown request type :: $type"
             ;;
     esac
 fi

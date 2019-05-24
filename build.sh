@@ -111,7 +111,7 @@ while getopts "$optspec" o; do
     esac
 done
 brURL="https://buildroot.org/downloads/buildroot-$BUILDROOT_VERSION.tar.bz2"
-kernelURL="https://www.kernel.org/pub/linux/kernel/v4.x/linux-$KERNEL_VERSION.tar.xz"
+kernelURL="https://www.kernel.org/pub/linux/kernel/$KERNEL_BASE/linux-$KERNEL_VERSION.tar.xz"
 debDeps="git meld build-essential rsync libncurses5-dev bison flex gcc-arm-linux-gnueabi gcc-aarch64-linux-gnu"
 rhelDeps="git meld rsync ncurses-devel bison flex gcc-arm-linux-gnu gcc-aarch64-linux-gnu"
 [[ -z $arch ]] && arch="x64 x86 arm arm64"
