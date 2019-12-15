@@ -27,8 +27,8 @@ grub-install --removable --no-nvram --no-uefi-secure-boot --efi-directory=/mnt -
 grub-install --removable --no-floppy --boot-directory=/mnt/boot --target=i386-pc /dev/${LOOPDEV}
 
 echo Download the FOG kernels and inits
-cp /images/bootfiles/bzImage /mnt/boot/
-cp /images/bootfiles/init.xz /mnt/boot/
+cp dist/bzImage /mnt/boot/
+cp dist/init.xz /mnt/boot/
 #wget -P /mnt/boot/ https://fogproject.org/inits/init.xz
 wget -P /mnt/boot/ https://fogproject.org/inits/init_32.xz
 #wget -P /mnt/boot/ https://fogproject.org/kernels/bzImage

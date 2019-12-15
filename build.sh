@@ -325,6 +325,9 @@ function buildKernel() {
             exit 1
 	fi
     fi
+    for filename in ../patch/kernel/000*.patch; do
+        patch -p1 < $filename
+    done
     dots "Cloning Linux firmware repository"
     git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git >/dev/null 2>&1
     echo "Done"

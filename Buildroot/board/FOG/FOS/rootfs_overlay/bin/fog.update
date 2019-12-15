@@ -1,0 +1,55 @@
+#!/bin/bash
+echo "Updating FOG Files"
+copyFiles() {
+	local source="$1"
+	local dest="$2"
+	for file in $source*; do
+		dFile=$(echo $file | awk -v sourceD=$source '{sub(sourceD,""); print}')
+		if [[ -f "$dest$dFile" ]]; then
+			diff -u $file $dest$dFile > /dev/null
+			if [[ $? -eq 0 ]]; then
+				echo "File $dFile is up to date!"
+			else
+				echo "Updating $dFile"
+				cp $file $dest$dFile
+			fi
+		fi
+	done
+}
+[[ ! -d /boot ]] && mkdir /boot >/dev/null 2>&1
+umount /boot >/dev/null 2>&1
+. /usr/share/fog/lib/funcs.sh
+unset IFS
+disk=""
+getHardDisk
+disk=$hd
+getPartitions $hd
+partsIn=$parts
+efi=""
+efipart=""
+windows=""
+outputParted=$(parted --list 2>/dev/null | grep "Disk")
+IFS=$'\n'
+for itemParts in $parts
+do
+        partInfo=$(fdisk -l | grep $itemParts)
+        if [[ $partInfo == *"EFI System"* ]]; then
+                IFS=$'  ' read -r -a itemArray <<< "$item"
+                getPartitionNumber $itemParts
+                efi=$part_number
+		efipart=$itemParts
+        fi
+        if [[ $partInfo == *"Microsoft basic data"* ]]; then
+                windows="$itemParts"
+        fi
+done
+echo "Mounting boot partition - $efipart"
+mount $efipart /boot >/dev/null 2>&1
+echo "Starting fog boot update"
+copyFiles "/images/bootfiles/" "/boot/boot/"
+echo "Starting fog base update"
+copyFiles "/images/fogfiles/" "/bin/"
+copyFiles "/images/fogfiles/usr/" "/usr/share/fog/lib/"
+echo "Starting grub update"
+copyFiles "/images/bootfiles/grub/" "/boot/boot/grub/"
+umount /boot >/dev/null 2>&1

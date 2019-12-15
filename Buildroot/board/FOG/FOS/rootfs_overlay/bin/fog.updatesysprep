@@ -1,0 +1,101 @@
+#!/bin/bash
+. /usr/share/fog/lib/funcs.sh
+unset IFS
+disk=""
+getHardDisk
+disk=$hd
+getPartitions $hd
+partsIn=$parts
+efi=""
+efiwindows="3"
+windows=""
+windowspart=""
+outputParted=$(parted --list 2>/dev/null | grep "Disk")
+IFS=$'\n'
+for itemParts in $parts
+do
+	partInfo=$(fdisk -l | grep $itemParts)
+	if [[ $partInfo == *"EFI System"* ]]; then
+		IFS=$'  ' read -r -a itemArray <<< "$item"
+                getPartitionNumber $itemParts
+		efi=$part_number
+        fi
+        if [[ $partInfo == *"Microsoft basic data"* ]]; then
+		getPartitionNumber $itemParts
+		efiwindows=$part_number
+		windowspart="$itemParts"
+        fi
+done
+echo "Setting proper UEFI boot settings"
+output=$(efibootmgr)
+IFS=$'\n'
+for item in $output
+do
+        if [[ $item == *"debian"* ]]; then
+		debian=$(echo $item | awk '{sub(/debian/,""); print}' | awk '{sub(/*/,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}')
+		efiRemoveOutput=$(efibootmgr -b "$debian" -B)
+        fi
+	if [[ $item == *"Windows"* ]]; then
+		windows=$(echo $item | awk '{sub(/Windows Boot Manager/,""); print}' | awk '{sub(/* /,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}' | tr -d '[:space:]')
+                efiRemoveOutput=$(efibootmgr -b "$windows" -B)
+        fi
+done
+efiLog=$(efibootmgr -b 0 -B)
+efiLog=$(efibootmgr -b 1 -B)
+efiLog=$(efibootmgr -b 2 -B)
+efiLog=$(efibootmgr -b 3 -B)
+efiLog=$(efibootmgr -b 4 -B)
+efiLog=$(efibootmgr -b 5 -B)
+efiLog=$(efibootmgr -b 6 -B)
+efiLog=$(efibootmgr -b 7 -B)
+efiLog=$(efibootmgr -b 8 -B)
+efiLog=$(efibootmgr -b 9 -B)
+efiLog=$(efibootmgr -b A -B)
+efiLog=$(efibootmgr -b B -B)
+efiLog=$(efibootmgr -b C -B)
+efiLog=$(efibootmgr -b D -B)
+efiLog=$(efibootmgr -b E -B)
+efiLog=$(efibootmgr -b F -B)
+efiLog=$(efibootmgr --create --disk $disk --part $efi --label "Windows Boot Manager" --loader "/EFI/Microsoft/Boot/bootmgfw.efi")
+efiLog=$(efibootmgr --create --disk $disk --part $efi --label "debian" --loader "/EFI/debian/grubx64.efi")
+output=$(efibootmgr)
+IFS=$'\n'
+for item in $output
+do
+        if [[ $item == *"debian"* ]]; then
+		debian=$(echo $item | awk '{sub(/debian/,""); print}' | awk '{sub(/*/,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}')
+        fi
+        if [[ $item == *"Windows"* ]]; then
+		windows=$(echo $item | awk '{sub(/Windows Boot Manager/,""); print}' | awk '{sub(/* /,""); print}' | awk '{sub(/Boot/,""); print}' | awk '{sub(/ /,""); print}' | tr -d '[:space:]')
+                efiRemoveOutput=$(efibootmgr -b "$windows" -A)
+        fi
+done
+
+dots "Preparing windows system prep"
+umount /ntfs >/dev/null 2>&1
+if [[ ! -d /ntfs ]]; then
+    mkdir -p /ntfs >/dev/null 2>&1
+    if [[ ! $? -eq 0 ]]; then
+        echo "Failed"
+        debugPause
+        handleError "Failed to create location to mount windows ($0)\n   Args Passed: $*"
+    fi
+fi
+. /imagesinit/postinitscripts/fog.update
+. /bin/fog.rebootwindows
+mount.ntfs-3g -o remove_hiberfile "$windowspart" /ntfs > /dev/nulll 2>&1
+case $? in
+    0)
+        echo "Done"
+	cp -R /imagesinit/windowsfiles/* /ntfs/
+        rm -R '/ntfs/Program Files (x86)/FOG'
+        rm -R '/ntfs/Users/Administrator'
+	umount /ntfs
+        debugPause
+        ;;
+    *)
+        echo "Failed"
+        debugPause
+        handleError "Could not mount ntfs folder ($0)\n   Args Passed: $*\n    Reason: $(cat /tmp/mount-output | tr -d \\0)"
+        ;;
+esac
